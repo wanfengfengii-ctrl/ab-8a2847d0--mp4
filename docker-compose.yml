@@ -1,0 +1,33 @@
+name: fmp4audit
+
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    image: fmp4audit-api:latest
+    environment:
+      PORT: "8080"
+    ports:
+      # Host port is configurable: API_PORT=9000 docker compose up api
+      - "${API_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 3s
+    restart: unless-stopped
+
+  verify:
+    build:
+      context: .
+      target: verify
+    image: fmp4audit-verify:latest
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_URL: "http://api:8080"
+    # One-shot: runs build checks, unit tests and HTTP smoke, then exits.
+    restart: "no"
